@@ -42,15 +42,19 @@ sudo apt install -y \
 - [x] Commit: `sim: add camera + LIDAR sensors` (2026-06-26)
 
 ### Day 2 — Scene authoring
-- [ ] Create `worlds/autonomous.world` (copy `worlds/pick_place.world` structure)
-- [ ] Add 4 thin static-box walls forming ~5m × 5m enclosure
-- [ ] Add 2–3 obstacles (cylinders/boxes, static)
-- [ ] Place `target_block` (red, 5cm cube) requiring nav around at least one obstacle
-- [ ] Place 3 distractors: dark-orange, magenta, brown (5cm cubes)
-- [ ] Place `target_table` at drop-off location
-- [ ] Create `launch/autonomous.launch.py` using the new world (keep `pick_place.launch.py` working)
+**Scope shift 2026-06-26:** Adopted `aws-robomaker-small-house-world` instead of authoring a custom 5×5 room. AWS world supplies walls, furniture, and lighting; we only spawn the robot + target_block + 3 distractors + drop-off table into it.
+
+- [x] ~~Create `worlds/autonomous.world`~~ → N/A, AWS world replaces this
+- [x] ~~Add 4 thin static-box walls~~ → N/A, AWS small_house provides walls
+- [x] ~~Add 2–3 obstacles~~ → N/A, AWS furniture (sofa, chairs, kitchen island, dining table) acts as obstacles for Nav2
+- [x] Place `target_block` (red, 5cm cube) at `(-1.0, 1.0)` (2026-06-26)
+- [x] Place 3 distractors: dark-orange `(-2.0, 0.0)`, magenta `(-1.5, -1.0)`, brown `(0.0, 2.0)` (2026-06-26)
+- [x] Place `target_table` at `(1.5, -1.5)` (2026-06-26)
+- [x] Create `launch/autonomous.launch.py` (uses AWS small_house, keeps `pick_place.launch.py` working) (2026-06-26)
 - [ ] Teleop confirms reachability + camera shows colors distinctly
-- [ ] Commit: `sim: autonomous scene with obstacles + distractors`
+- [x] Commit: `sim: autonomous scene with obstacles + distractors` (2026-06-26)
+
+**Day 2 debugging notes:** Hit two non-obvious bugs while integrating AWS package. (1) `GAZEBO_MODEL_PATH` doesn't auto-set from AWS `package.xml` export → fixed in launch via `SetEnvironmentVariable`. (2) `gazebo_ros`'s `gzclient.launch.py` injects `libgazebo_ros_eol_gui.so` which null-derefs a Camera shared_ptr and crashes the window → fixed by including `gzserver.launch.py` only and spawning bare `gzclient` binary via `ExecuteProcess`. Both workarounds are baked into `autonomous.launch.py` so a fresh launch from any terminal Just Works.
 
 ### Day 3 — Static map generation
 - [ ] Add `maps/` dir + extend `install(DIRECTORY ...)` in `CMakeLists.txt`
