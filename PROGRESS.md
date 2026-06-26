@@ -39,7 +39,7 @@ sudo apt install -y \
 - [x] Add `<sensor type="ray">` with `libgazebo_ros_ray_sensor.so` — 360 samples, 10 m range, 10 Hz, topic `/scan` (2026-06-26)
 - [x] `colcon build`, launch, verify `ros2 topic hz /scan` ≈ 10, `/camera/image_raw` ≈ 30 (2026-06-26 — `/scan` rock-solid 10.0 Hz; `/camera/image_raw` ~8 Hz avg with high variance — Gazebo RTF is 1.0 so variance is `rqt_image_view` subscriber overhead, not the sim. Accepted; revisit if Day 5 perception is choppy.)
 - [x] Camera visible in `rqt_image_view`; LIDAR scan visible in RViz (2026-06-26 — robot loaded cleanly in Gazebo with sensors attached; topics publishing)
-- [ ] Commit: `sim: add camera + LIDAR sensors`
+- [x] Commit: `sim: add camera + LIDAR sensors` (2026-06-26)
 
 ### Day 2 — Scene authoring
 - [ ] Create `worlds/autonomous.world` (copy `worlds/pick_place.world` structure)
