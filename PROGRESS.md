@@ -57,13 +57,13 @@ sudo apt install -y \
 **Day 2 debugging notes:** Hit two non-obvious bugs while integrating AWS package. (1) `GAZEBO_MODEL_PATH` doesn't auto-set from AWS `package.xml` export → fixed in launch via `SetEnvironmentVariable`. (2) `gazebo_ros`'s `gzclient.launch.py` injects `libgazebo_ros_eol_gui.so` which null-derefs a Camera shared_ptr and crashes the window → fixed by including `gzserver.launch.py` only and spawning bare `gzclient` binary via `ExecuteProcess`. Both workarounds are baked into `autonomous.launch.py` so a fresh launch from any terminal Just Works.
 
 ### Day 3 — Static map generation
-- [ ] Add `maps/` dir + extend `install(DIRECTORY ...)` in `CMakeLists.txt`
-- [ ] Write `launch/mapping.launch.py` (Gazebo + RSP + robot + `slam_toolbox` online_async)
-- [ ] Teleop until map complete in RViz
-- [ ] `ros2 run nav2_map_server map_saver_cli -f src/mobile_arm_sim/maps/autonomous_map`
-- [ ] `.pgm` looks correct (walls + obstacles, free space)
+- [x] Add `maps/` dir + extend `install(DIRECTORY ...)` in `CMakeLists.txt`
+- [x] Write `launch/mapping.launch.py` (Gazebo + RSP + robot + `slam_toolbox` online_async)
+- [x] Teleop until map complete in RViz (2026-07-01)
+- [x] `ros2 run nav2_map_server map_saver_cli -f src/mobile_arm_sim/maps/autonomous_map` (2026-07-01 — 372×221 @ 5cm, 75% free / 3.3% walls / 21.5% unknown)
+- [x] `.pgm` looks correct (walls + obstacles, free space) (2026-07-01)
 - [ ] Sanity check: `nav2_bringup map_server.launch.py` shows the map in RViz
-- [ ] Commit: `sim: static occupancy map for AMCL + Nav2`
+- [x] Commit: `sim: static occupancy map for AMCL + Nav2` (2026-07-01)
 
 ### Day 4 — Nav2 bringup
 - [ ] Write `config/nav2_params.yaml` — amcl + planner_server + controller_server + costmaps + bt_navigator
