@@ -2,7 +2,7 @@
 import os, re, subprocess
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
-from launch.actions import IncludeLaunchDescription, RegisterEventHandler, TimerAction
+from launch.actions import IncludeLaunchDescription, RegisterEventHandler, SetEnvironmentVariable, TimerAction
 from launch.event_handlers import OnProcessExit
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import PathJoinSubstitution
@@ -18,6 +18,14 @@ def generate_launch_description():
     urdf_clean = re.sub(r'<!--.*?-->', '', urdf_raw, flags=re.DOTALL)
 
     robot_description = {'robot_description': urdf_clean, 'use_sim_time': True}
+
+    # gazebo_ros's gzserver.launch.py does not source /usr/share/gazebo/setup.bash,
+    # so OGRE can't find its shader lib and camera sensors fail silently. Set here
+    # so /camera/image_raw actually publishes.
+    set_resource_path = SetEnvironmentVariable(
+        name='GAZEBO_RESOURCE_PATH',
+        value='/usr/share/gazebo-11:' + os.environ.get('GAZEBO_RESOURCE_PATH', ''),
+    )
 
     gazebo = IncludeLaunchDescription(
         PythonLaunchDescriptionSource([
@@ -54,6 +62,7 @@ def generate_launch_description():
                          arguments=['gripper_controller', '--controller-manager', '/controller_manager'])
 
     return LaunchDescription([
+        set_resource_path,
         gazebo, rsp, spawn_robot,
         TimerAction(period=3.0, actions=[spawn_block, spawn_table]),
         RegisterEventHandler(OnProcessExit(target_action=spawn_robot, on_exit=[spawn_jsb])),

@@ -48,6 +48,14 @@ def generate_launch_description():
         value=os.path.join(aws_share, 'models') + ':' + os.environ.get('GAZEBO_MODEL_PATH', ''),
     )
 
+    # See note in autonomous.launch.py: gzserver.launch.py does not source
+    # /usr/share/gazebo/setup.bash, breaking OGRE shader/material lookup and
+    # any rendering-based sensor. Set here so the camera plugin can render.
+    set_resource_path = SetEnvironmentVariable(
+        name='GAZEBO_RESOURCE_PATH',
+        value='/usr/share/gazebo-11:' + os.environ.get('GAZEBO_RESOURCE_PATH', ''),
+    )
+
     # Same gzserver + bare-gzclient split as autonomous.launch.py — see
     # project_aws_small_house_gotchas memory for why the launch-file gzclient crashes.
     gzserver = IncludeLaunchDescription(
@@ -96,6 +104,7 @@ def generate_launch_description():
 
     return LaunchDescription([
         set_model_path,
+        set_resource_path,
         gzserver,
         TimerAction(period=3.0, actions=[gzclient]),
         rsp,

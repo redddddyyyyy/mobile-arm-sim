@@ -36,6 +36,15 @@ def generate_launch_description():
         value=os.path.join(aws_share, 'models') + ':' + os.environ.get('GAZEBO_MODEL_PATH', ''),
     )
 
+    # gzserver.launch.py doesn't source /usr/share/gazebo/setup.bash, so the OGRE
+    # shader lib and Gazebo/* material scripts are unreachable and camera sensors
+    # fail with "Failed to initialize scene / Unable to create CameraSensor".
+    # LIDAR (CPU ray) survives; RGB cameras do not.
+    set_resource_path = SetEnvironmentVariable(
+        name='GAZEBO_RESOURCE_PATH',
+        value='/usr/share/gazebo-11:' + os.environ.get('GAZEBO_RESOURCE_PATH', ''),
+    )
+
     # gzserver via gazebo_ros launch (handles ROS plugin paths cleanly).
     # gzclient is the BARE binary, not gzclient.launch.py — the launch-file
     # version injects libgazebo_ros_eol_gui.so which null-derefs a Camera
@@ -121,6 +130,7 @@ def generate_launch_description():
 
     return LaunchDescription([
         set_model_path,
+        set_resource_path,
         gzserver,
         # 3s lets gzserver advertise its master before gzclient tries to connect.
         TimerAction(period=3.0, actions=[gzclient]),
