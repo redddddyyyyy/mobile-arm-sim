@@ -423,9 +423,9 @@
       <publish_odom_tf>true</publish_odom_tf>
       <odometry_frame>odom</odometry_frame>
       <robot_base_frame>base_footprint</robot_base_frame>
-      <covariance_x>0.0001</covariance_x>
-      <covariance_y>0.0001</covariance_y>
-      <covariance_yaw>0.01</covariance_yaw>
+      <covariance_x>0.01</covariance_x>
+      <covariance_y>0.01</covariance_y>
+      <covariance_yaw>0.02</covariance_yaw>
     </plugin>
   </gazebo>
 
