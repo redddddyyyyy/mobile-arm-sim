@@ -51,7 +51,7 @@ sudo apt install -y \
 - [x] Place 3 distractors: dark-orange `(-2.0, 0.0)`, magenta `(-1.5, -1.0)`, brown `(0.0, 2.0)` (2026-06-26)
 - [x] Place `target_table` at `(1.5, -1.5)` (2026-06-26)
 - [x] Create `launch/autonomous.launch.py` (uses AWS small_house, keeps `pick_place.launch.py` working) (2026-06-26)
-- [ ] Teleop confirms reachability + camera shows colors distinctly
+- [x] Teleop confirms reachability + camera shows colors distinctly (2026-07-02 — red/orange/magenta/brown all distinct on camera; camera was silently broken until fixing GAZEBO_RESOURCE_PATH in launch files, see 483327e)
 - [x] Commit: `sim: autonomous scene with obstacles + distractors` (2026-06-26)
 
 **Day 2 debugging notes:** Hit two non-obvious bugs while integrating AWS package. (1) `GAZEBO_MODEL_PATH` doesn't auto-set from AWS `package.xml` export → fixed in launch via `SetEnvironmentVariable`. (2) `gazebo_ros`'s `gzclient.launch.py` injects `libgazebo_ros_eol_gui.so` which null-derefs a Camera shared_ptr and crashes the window → fixed by including `gzserver.launch.py` only and spawning bare `gzclient` binary via `ExecuteProcess`. Both workarounds are baked into `autonomous.launch.py` so a fresh launch from any terminal Just Works.
@@ -62,7 +62,7 @@ sudo apt install -y \
 - [x] Teleop until map complete in RViz (2026-07-01)
 - [x] `ros2 run nav2_map_server map_saver_cli -f src/mobile_arm_sim/maps/autonomous_map` (2026-07-01 — 372×221 @ 5cm, 75% free / 3.3% walls / 21.5% unknown)
 - [x] `.pgm` looks correct (walls + obstacles, free space) (2026-07-01)
-- [ ] Sanity check: `nav2_bringup map_server.launch.py` shows the map in RViz
+- [x] Sanity check: `nav2_map_server` node loads `autonomous_map.yaml`, publishes `/map` with correct dims (372×221 @ 5cm, origin (-9.32,-5.52)) (2026-07-02 — nav2_bringup doesn't ship a map_server.launch.py; used the node directly with manual lifecycle configure→activate. RViz Map display fragments due to Nvidia GLSL bug but topic data is complete; Nav2 will consume topic directly)
 - [x] Commit: `sim: static occupancy map for AMCL + Nav2` (2026-07-01)
 
 ### Day 4 — Nav2 bringup
