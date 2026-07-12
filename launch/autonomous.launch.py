@@ -57,6 +57,14 @@ def generate_launch_description():
     )
     gzclient = ExecuteProcess(cmd=['gzclient'], output='screen')
 
+    nav2_launch = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource([
+            PathJoinSubstitution([
+                FindPackageShare('mobile_arm_sim'), 'launch', 'nav2.launch.py'
+            ])
+        ]),
+    )
+
     rsp = Node(
         package='robot_state_publisher',
         executable='robot_state_publisher',
@@ -143,4 +151,6 @@ def generate_launch_description():
         RegisterEventHandler(OnProcessExit(target_action=spawn_robot, on_exit=[spawn_jsb])),
         RegisterEventHandler(OnProcessExit(target_action=spawn_jsb, on_exit=[spawn_arm])),
         RegisterEventHandler(OnProcessExit(target_action=spawn_arm, on_exit=[spawn_gripper])),
+        # Nav2 needs the spawned robot's /scan, /odom and TF tree.
+        TimerAction(period=10.0, actions=[nav2_launch]),
     ])
