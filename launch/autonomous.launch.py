@@ -123,6 +123,14 @@ def generate_launch_description():
         output='screen',
     )
 
+    block_detector = Node(
+        package='mobile_arm_sim', executable='block_detector.py',
+        # Skip ~/.local site-packages: a pip-user numpy 2.x there breaks the
+        # numpy-1.x-built cv_bridge that ships with Humble.
+        additional_env={'PYTHONNOUSERSITE': '1'},
+        output='screen',
+    )
+
     spawn_jsb = Node(
         package='controller_manager', executable='spawner',
         arguments=['joint_state_broadcaster', '--controller-manager', '/controller_manager'],
@@ -153,4 +161,6 @@ def generate_launch_description():
         RegisterEventHandler(OnProcessExit(target_action=spawn_arm, on_exit=[spawn_gripper])),
         # Nav2 needs the spawned robot's /scan, /odom and TF tree.
         TimerAction(period=10.0, actions=[nav2_launch]),
+        # Camera topics exist once the robot is spawned; 10s rides the same margin.
+        TimerAction(period=10.0, actions=[block_detector]),
     ])
