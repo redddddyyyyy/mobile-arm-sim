@@ -172,10 +172,23 @@ class BlockDetector(Node):
 
         q = tf.transform.rotation
         t = tf.transform.translation
+        t_mo = np.array([t.x, t.y, t.z])
         p_map = pixel_to_ground(u, v, self._K,
-                                quat_to_rot(q.x, q.y, q.z, q.w),
-                                np.array([t.x, t.y, t.z]))
+                                quat_to_rot(q.x, q.y, q.z, q.w), t_mo)
         if p_map is None:
+            return
+
+        # Size-distance consistency: a 5 cm cube at the projected distance
+        # has a predictable pixel area. A red sofa cushion across the room
+        # makes a huge blob that passes the raw area gate but claims to be
+        # a "block" metres away — this is what rejects it.
+        dist = float(np.linalg.norm(p_map - t_mo))
+        expected = (self._K[0, 0] * 0.05 / max(dist, 0.05)) ** 2
+        if not 0.3 * expected <= area <= 4.0 * expected:
+            self.get_logger().info(
+                f'red blob rejected: {area:.0f} px^2 at {dist:.2f} m, '
+                f'a block there would be ~{expected:.0f} px^2',
+                throttle_duration_sec=5.0)
             return
 
         pose = PoseStamped()
