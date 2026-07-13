@@ -9,7 +9,9 @@ install(
 )
 
 install(
-  PROGRAMS scripts/block_detector.py
+  PROGRAMS
+    scripts/block_detector.py
+    scripts/autonomous_pick_place.py
   DESTINATION lib/${PROJECT_NAME}
 )
 
