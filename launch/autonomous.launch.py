@@ -75,8 +75,13 @@ def generate_launch_description():
     spawn_robot = Node(
         package='gazebo_ros',
         executable='spawn_entity.py',
+        # Open floor on the far side of the living area (2 m clearance on
+        # the map). The old spot (-3.0, 1.0) sat in a pocket behind a door
+        # gap too tight for the 0.25 m robot radius — first goals kept
+        # aborting on the progress checker while DWB inched through it.
+        # Keep amcl's initial_pose in nav2_params.yaml in sync with this.
         arguments=['-topic', 'robot_description', '-entity', 'mobile_arm',
-                   '-x', '-3.0', '-y', '1.0', '-z', '0.1'],
+                   '-x', '4.5', '-y', '-1.5', '-z', '0.1', '-Y', '3.14159'],
         output='screen',
     )
 
@@ -159,8 +164,12 @@ def generate_launch_description():
         RegisterEventHandler(OnProcessExit(target_action=spawn_robot, on_exit=[spawn_jsb])),
         RegisterEventHandler(OnProcessExit(target_action=spawn_jsb, on_exit=[spawn_arm])),
         RegisterEventHandler(OnProcessExit(target_action=spawn_arm, on_exit=[spawn_gripper])),
-        # Nav2 needs the spawned robot's /scan, /odom and TF tree.
-        TimerAction(period=10.0, actions=[nav2_launch]),
-        # Camera topics exist once the robot is spawned; 10s rides the same margin.
-        TimerAction(period=10.0, actions=[block_detector]),
+        # Nav2 needs the spawned robot's /scan, /odom and TF tree. 15s over
+        # the old 10: a cold-started gzserver once wasn't ready yet and the
+        # lifecycle manager wedged mid-configure.
+        TimerAction(period=15.0, actions=[nav2_launch]),
+        # The detector needs the map frame, which only exists once AMCL is
+        # up — same 15 s margin as Nav2, or it spends the gap warning about
+        # TF it can't have yet.
+        TimerAction(period=15.0, actions=[block_detector]),
     ])
