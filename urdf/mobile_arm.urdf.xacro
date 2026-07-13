@@ -73,9 +73,11 @@
   </gazebo>
 
   <!-- ============================================================== -->
-  <!-- Wheels: FIXED joints, visual-only (planar_move teleports base) -->
-  <!-- Fixed avoids ros2_control complications and is identical       -->
-  <!-- visually since planar_move never spins the wheels anyway.      -->
+  <!-- Wheels: FIXED joints, frictionless collision. planar_move slides -->
+  <!-- the base rather than spinning wheels, so any wheel friction acts -->
+  <!-- as a brake between plugin velocity updates (measured: the robot  -->
+  <!-- reached ~10-35% of commanded speed with default mu). Collision   -->
+  <!-- stays: it carries the chassis at ride height.                    -->
   <!-- ============================================================== -->
   <xacro:macro name="mecanum_wheel" params="prefix x y">
     <link name="${prefix}_wheel">
@@ -99,6 +101,8 @@
 
     <gazebo reference="${prefix}_wheel">
       <material>Gazebo/FlatBlack</material>
+      <mu1>0.0</mu1>
+      <mu2>0.0</mu2>
     </gazebo>
   </xacro:macro>
 
