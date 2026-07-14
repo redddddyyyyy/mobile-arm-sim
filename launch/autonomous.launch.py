@@ -141,7 +141,7 @@ def generate_launch_description():
         executable='spawn_entity.py',
         arguments=['-file', os.path.join(pkg_share, 'urdf', 'table.sdf'),
                    '-entity', 'target_table',
-                   '-x', '1.5', '-y', '-1.5', '-z', '0.075'],
+                   '-x', '4.0', '-y', '-2.5', '-z', '0.075'],
         output='screen',
     )
 
