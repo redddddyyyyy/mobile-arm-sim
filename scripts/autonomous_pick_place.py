@@ -64,7 +64,7 @@ STUB_DWELL = 1.5  # seconds a stubbed state lingers before passing through
 # spin before moving on. The detector only reaches ~1.1 m (a 5 cm cube is
 # a dozen pixels beyond that), so searching means going places, not just
 # looking around from the start.
-SEARCH_WAYPOINTS = [(0.7, 2.0), (-1.5, -0.3), (-1.6, 1.0)]
+SEARCH_WAYPOINTS = [(0.7, 2.0), (-1.5, -0.3), (-6.9, -0.1)]
 
 SPIN_SPEED = 0.4                                  # rad/s while scanning
 SPIN_DURATION = 2 * math.pi / SPIN_SPEED * 1.2    # one revolution + slack

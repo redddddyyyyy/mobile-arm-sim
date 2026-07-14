@@ -18,6 +18,14 @@ LOW2, HIGH2 = (174, 120, 70), (180, 255, 255)
 MIN_AREA = 400.0   # px^2 — below this it's a reflection or speckle, not the block
 GROUND_Z = 0.025   # block center height: 5 cm cube sitting on the floor
 
+# Log-readability only: name what's in view when it isn't the target.
+# Orange and brown overlap in hue (~8-22); brightness tells them apart.
+DISTRACTOR_BANDS = [
+    ('orange',  (8, 120, 120), (22, 255, 255)),
+    ('brown',   (5, 60, 20),   (22, 255, 115)),
+    ('magenta', (135, 80, 70), (172, 255, 255)),
+]
+
 _KERNEL = cv2.getStructuringElement(cv2.MORPH_RECT, (5, 5))
 
 
@@ -142,7 +150,7 @@ class BlockDetector(Node):
                         (h2, s_min, v_min), (h3, 255, 255))
         hit = largest_blob_centroid(mask, self.get_parameter('min_area').value)
         if hit is None:
-            self.get_logger().info('no block in view', throttle_duration_sec=5.0)
+            self._log_whats_in_view(hsv)
             return
         u, v, area = hit
 
@@ -213,8 +221,22 @@ class BlockDetector(Node):
         marker.lifetime = Duration(seconds=1.0).to_msg()
         self._marker_pub.publish(marker)
 
-        self.get_logger().debug(
-            f'block at map ({p_map[0]:.2f}, {p_map[1]:.2f}), blob {area:.0f} px^2')
+        self.get_logger().info(
+            f'TARGET block (red) at map ({p_map[0]:.2f}, {p_map[1]:.2f}), '
+            f'{area:.0f} px^2 at {dist:.2f} m — size checks out',
+            throttle_duration_sec=2.0)
+
+    def _log_whats_in_view(self, hsv):
+        min_area = self.get_parameter('min_area').value
+        for name, lo, hi in DISTRACTOR_BANDS:
+            m = cv2.inRange(hsv, np.array(lo), np.array(hi))
+            m = cv2.morphologyEx(m, cv2.MORPH_OPEN, _KERNEL)
+            if largest_blob_centroid(m, min_area) is not None:
+                self.get_logger().info(
+                    f'{name} block in view — a distractor, not the target',
+                    throttle_duration_sec=5.0)
+                return
+        self.get_logger().info('no block in view', throttle_duration_sec=5.0)
 
 
 def main(args=None):

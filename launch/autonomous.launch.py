@@ -90,7 +90,7 @@ def generate_launch_description():
         executable='spawn_entity.py',
         arguments=['-file', os.path.join(pkg_share, 'urdf', 'block.sdf'),
                    '-entity', 'target_block',
-                   '-x', '-1.0', '-y', '1.0', '-z', '0.025'],
+                   '-x', '-7.6', '-y', '-0.1', '-z', '0.025'],
         output='screen',
     )
 
@@ -99,7 +99,7 @@ def generate_launch_description():
         executable='spawn_entity.py',
         arguments=['-file', os.path.join(pkg_share, 'urdf', 'distractor_orange.sdf'),
                    '-entity', 'distractor_orange',
-                   '-x', '-2.0', '-y', '0.0', '-z', '0.025'],
+                   '-x', '1.4', '-y', '2.4', '-z', '0.025'],
         output='screen',
     )
     spawn_dist_magenta = Node(
@@ -107,7 +107,7 @@ def generate_launch_description():
         executable='spawn_entity.py',
         arguments=['-file', os.path.join(pkg_share, 'urdf', 'distractor_magenta.sdf'),
                    '-entity', 'distractor_magenta',
-                   '-x', '-1.5', '-y', '-1.0', '-z', '0.025'],
+                   '-x', '-2.2', '-y', '-0.8', '-z', '0.025'],
         output='screen',
     )
     spawn_dist_brown = Node(
@@ -115,7 +115,7 @@ def generate_launch_description():
         executable='spawn_entity.py',
         arguments=['-file', os.path.join(pkg_share, 'urdf', 'distractor_brown.sdf'),
                    '-entity', 'distractor_brown',
-                   '-x', '0.0', '-y', '2.0', '-z', '0.025'],
+                   '-x', '3.6', '-y', '-1.2', '-z', '0.025'],
         output='screen',
     )
 
