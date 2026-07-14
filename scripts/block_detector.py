@@ -19,10 +19,13 @@ MIN_AREA = 400.0   # px^2 — below this it's a reflection or speckle, not the b
 GROUND_Z = 0.025   # block center height: 5 cm cube sitting on the floor
 
 # Log-readability only: name what's in view when it isn't the target.
-# Orange and brown overlap in hue (~8-22); brightness tells them apart.
+# Orange and brown overlap in hue (~8-22); brightness tells them apart —
+# the SDF materials work out to V~255 vs V~115, split with slack for
+# lighting. Every candidate still has to pass the size-distance check, or
+# the orange chairs and wood floor of the house get called blocks.
 DISTRACTOR_BANDS = [
-    ('orange',  (8, 120, 120), (22, 255, 255)),
-    ('brown',   (5, 60, 20),   (22, 255, 115)),
+    ('orange',  (8, 150, 140), (22, 255, 255)),
+    ('brown',   (5, 100, 40),  (22, 255, 139)),
     ('magenta', (135, 80, 70), (172, 255, 255)),
 ]
 
@@ -148,41 +151,18 @@ class BlockDetector(Node):
         hsv = cv2.cvtColor(bgr, cv2.COLOR_BGR2HSV)
         mask = red_mask(hsv, (h0, s_min, v_min), (h1, 255, 255),
                         (h2, s_min, v_min), (h3, 255, 255))
+        cam = self._camera_pose(msg.header.stamp)
+        if cam is None:
+            return
+        R_mo, t_mo = cam
+
         hit = largest_blob_centroid(mask, self.get_parameter('min_area').value)
         if hit is None:
-            self._log_whats_in_view(hsv)
+            self._log_whats_in_view(hsv, R_mo, t_mo)
             return
         u, v, area = hit
 
-        # Prefer the camera pose at the image stamp — while the robot turns,
-        # 100 ms of pose error smears the projection sideways. But AMCL only
-        # refreshes map->odom on filter updates, so a parked robot's TF goes
-        # seconds stale and exact-stamp lookups die on extrapolation. Fall
-        # back to the latest transform then: a stationary camera hasn't moved
-        # since it was published.
-        try:
-            tf = self._tf_buffer.lookup_transform(
-                'map', self._cam_frame, msg.header.stamp,
-                timeout=Duration(seconds=0.2))
-        except tf2_ros.ExtrapolationException:
-            try:
-                tf = self._tf_buffer.lookup_transform(
-                    'map', self._cam_frame, rclpy.time.Time())
-            except (tf2_ros.LookupException, tf2_ros.ConnectivityException,
-                    tf2_ros.ExtrapolationException) as exc:
-                self.get_logger().warning(f'no map->{self._cam_frame} TF: {exc}',
-                                          throttle_duration_sec=2.0)
-                return
-        except (tf2_ros.LookupException, tf2_ros.ConnectivityException) as exc:
-            self.get_logger().warning(f'no map->{self._cam_frame} TF: {exc}',
-                                      throttle_duration_sec=2.0)
-            return
-
-        q = tf.transform.rotation
-        t = tf.transform.translation
-        t_mo = np.array([t.x, t.y, t.z])
-        p_map = pixel_to_ground(u, v, self._K,
-                                quat_to_rot(q.x, q.y, q.z, q.w), t_mo)
+        p_map = pixel_to_ground(u, v, self._K, R_mo, t_mo)
         if p_map is None:
             return
 
@@ -191,8 +171,8 @@ class BlockDetector(Node):
         # makes a huge blob that passes the raw area gate but claims to be
         # a "block" metres away — this is what rejects it.
         dist = float(np.linalg.norm(p_map - t_mo))
-        expected = (self._K[0, 0] * 0.05 / max(dist, 0.05)) ** 2
-        if not 0.3 * expected <= area <= 4.0 * expected:
+        if not self._block_sized(area, dist):
+            expected = (self._K[0, 0] * 0.05 / max(dist, 0.05)) ** 2
             self.get_logger().info(
                 f'red blob rejected: {area:.0f} px^2 at {dist:.2f} m, '
                 f'a block there would be ~{expected:.0f} px^2',
@@ -226,12 +206,52 @@ class BlockDetector(Node):
             f'{area:.0f} px^2 at {dist:.2f} m — size checks out',
             throttle_duration_sec=2.0)
 
-    def _log_whats_in_view(self, hsv):
+    def _camera_pose(self, stamp):
+        """(R, t) taking optical-frame points to map, or None.
+
+        Prefer the image stamp — while the robot turns, 100 ms of pose error
+        smears the projection sideways. But AMCL only refreshes map->odom on
+        filter updates, so a parked robot's TF goes seconds stale and
+        exact-stamp lookups die on extrapolation; fall back to the latest
+        transform then, since a stationary camera hasn't moved.
+        """
+        try:
+            tf = self._tf_buffer.lookup_transform(
+                'map', self._cam_frame, stamp, timeout=Duration(seconds=0.2))
+        except tf2_ros.ExtrapolationException:
+            try:
+                tf = self._tf_buffer.lookup_transform(
+                    'map', self._cam_frame, rclpy.time.Time())
+            except (tf2_ros.LookupException, tf2_ros.ConnectivityException,
+                    tf2_ros.ExtrapolationException) as exc:
+                self.get_logger().warning(f'no map->{self._cam_frame} TF: {exc}',
+                                          throttle_duration_sec=2.0)
+                return None
+        except (tf2_ros.LookupException, tf2_ros.ConnectivityException) as exc:
+            self.get_logger().warning(f'no map->{self._cam_frame} TF: {exc}',
+                                      throttle_duration_sec=2.0)
+            return None
+        q = tf.transform.rotation
+        t = tf.transform.translation
+        return quat_to_rot(q.x, q.y, q.z, q.w), np.array([t.x, t.y, t.z])
+
+    def _block_sized(self, area, dist):
+        expected = (self._K[0, 0] * 0.05 / max(dist, 0.05)) ** 2
+        return 0.3 * expected <= area <= 4.0 * expected
+
+    def _log_whats_in_view(self, hsv, R_mo, t_mo):
         min_area = self.get_parameter('min_area').value
         for name, lo, hi in DISTRACTOR_BANDS:
             m = cv2.inRange(hsv, np.array(lo), np.array(hi))
             m = cv2.morphologyEx(m, cv2.MORPH_OPEN, _KERNEL)
-            if largest_blob_centroid(m, min_area) is not None:
+            hit = largest_blob_centroid(m, min_area)
+            if hit is None:
+                continue
+            u, v, area = hit
+            p = pixel_to_ground(u, v, self._K, R_mo, t_mo)
+            if p is None:
+                continue
+            if self._block_sized(area, float(np.linalg.norm(p - t_mo))):
                 self.get_logger().info(
                     f'{name} block in view — a distractor, not the target',
                     throttle_duration_sec=5.0)
