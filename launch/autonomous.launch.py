@@ -2,6 +2,7 @@
 import os
 import re
 import subprocess
+import tempfile
 
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
@@ -25,6 +26,22 @@ def generate_launch_description():
 
     urdf_file = os.path.join(pkg_share, 'urdf', 'mobile_arm.urdf.xacro')
     world_file = os.path.join(aws_share, 'worlds', 'small_house.world')
+
+    # gazebo_ros_state is a WORLD plugin — it only works from inside <world>
+    # in the SDF, and the AWS file doesn't load it. Its /set_entity_state
+    # service is what the magic grasp rides. Patch a copy at launch time
+    # instead of vendoring Amazon's whole world file into this repo.
+    state_plugin = (
+        '    <plugin name="gazebo_ros_state" filename="libgazebo_ros_state.so">\n'
+        '      <ros><namespace>/</namespace></ros>\n'
+        '      <update_rate>1.0</update_rate>\n'
+        '    </plugin>\n'
+        '  </world>')
+    with open(world_file) as f:
+        world_xml = f.read()
+    world_file = os.path.join(tempfile.gettempdir(), 'small_house_with_state.world')
+    with open(world_file, 'w') as f:
+        f.write(world_xml.replace('</world>', state_plugin))
 
     urdf_raw = subprocess.check_output(['xacro', urdf_file]).decode('utf-8')
     urdf_clean = re.sub(r'<!--.*?-->', '', urdf_raw, flags=re.DOTALL)
