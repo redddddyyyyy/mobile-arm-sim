@@ -34,8 +34,8 @@ GRASP     = [0.0,  0.9, 1.6, 0.5]
 LIFT      = [0.0,  0.0, 1.0, 0.3]
 # Measured via TF, not guessed: the old DROP (= PRE_GRASP) released only
 # 0.27 m ahead of base centre — 7 cm past the bumper — so blocks fell into
-# the robot/table gap. This one releases at 0.35 m forward, 0.20 m above
-# the table top.
+# the robot/table gap. This one puts the gripper 0.35 m ahead of base
+# centre, over the table's middle; _detach handles the actual letting-go.
 DROP      = [0.0,  1.1, 0.6, 0.1]
 
 GRIPPER_OPEN = -0.015
@@ -115,9 +115,13 @@ class Orchestrator(Node):
                                  qos_profile_sensor_data)
 
         # Magic grasp: while attached, a 20 Hz timer teleports the block to
-        # the gripper. The gripper is looked up in the MAP frame — the old
-        # scripted demo used odom, which only equalled world because that
-        # robot spawned at the origin. Ours doesn't.
+        # the gripper. The gripper offset is looked up base_footprint ->
+        # gripper_base (pure joint kinematics) and applied relative to the
+        # robot MODEL in Gazebo, so the block lands wherever the gripper
+        # physically is. An earlier version looked the gripper up in the
+        # map frame, which bakes AMCL's error into the block's real-world
+        # position — a 0.15 m estimate error put the release past the edge
+        # of the 0.30 m table even with the base docked against it by touch.
         self._tf_buffer = tf2_ros.Buffer()
         self._tf_listener = tf2_ros.TransformListener(self._tf_buffer, self)
         self._set_state_cli = self.create_client(SetEntityState, '/set_entity_state')
@@ -176,22 +180,27 @@ class Orchestrator(Node):
                          1 - 2 * (q.y * q.y + q.z * q.z))
         self._odom = (p.x, p.y, yaw)
 
+    def _set_block_rel(self, x, y, z):
+        req = SetEntityState.Request()
+        req.state.name = 'target_block'
+        req.state.pose.position.x = x
+        req.state.pose.position.y = y
+        req.state.pose.position.z = z
+        req.state.pose.orientation.w = 1.0
+        req.state.reference_frame = 'mobile_arm'
+        self._set_state_cli.call_async(req)
+
     def _teleport_block(self):
         if not self._attached or not self._set_state_cli.service_is_ready():
             return
         try:
-            t = self._tf_buffer.lookup_transform('map', 'gripper_base',
+            t = self._tf_buffer.lookup_transform('base_footprint', 'gripper_base',
                                                  rclpy.time.Time())
         except tf2_ros.TransformException:
             return
-        req = SetEntityState.Request()
-        req.state.name = 'target_block'
-        req.state.pose.position.x = t.transform.translation.x
-        req.state.pose.position.y = t.transform.translation.y
-        req.state.pose.position.z = t.transform.translation.z
-        req.state.pose.orientation.w = 1.0
-        req.state.reference_frame = 'world'
-        self._set_state_cli.call_async(req)
+        self._set_block_rel(t.transform.translation.x,
+                            t.transform.translation.y,
+                            t.transform.translation.z)
 
     # ---------- staged arm scripts ----------
 
@@ -552,7 +561,22 @@ class Orchestrator(Node):
         self.get_logger().info('magic grasp engaged — block follows the gripper')
 
     def _detach(self):
+        # Pinned at gripper_base's origin the block sits inside the palm's
+        # collision box, so cutting it loose there leaves the ejection to
+        # the physics engine — and the LIFT swing 1.5 s later bats the
+        # ejected block clean off the table (found by tracing block
+        # velocity through the placing stages). Park it in clear air 8 cm
+        # below the gripper first; from there it falls the last few cm
+        # onto the tabletop with no sideways speed.
         self._attached = False
+        try:
+            t = self._tf_buffer.lookup_transform('base_footprint', 'gripper_base',
+                                                 rclpy.time.Time())
+            self._set_block_rel(t.transform.translation.x,
+                                t.transform.translation.y,
+                                t.transform.translation.z - 0.08)
+        except tf2_ros.TransformException:
+            pass
         self.get_logger().info('released')
 
     def _on_grasping(self):
