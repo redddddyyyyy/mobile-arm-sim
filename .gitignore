@@ -24,3 +24,7 @@ maps/*.pgm.bak
 # Personal working notes — not for the repo
 instructions.md
 PROGRESS.md
+docs/checkpoint_report.*
+
+# Screen recordings are far too big for git; demo gifs are cut from them
+*.webm
