@@ -12,6 +12,7 @@ install(
   PROGRAMS
     scripts/block_detector.py
     scripts/autonomous_pick_place.py
+    scripts/pick_and_place.py
   DESTINATION lib/${PROJECT_NAME}
 )
 
