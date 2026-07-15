@@ -130,9 +130,14 @@ def generate_launch_description():
     spawn_dist_brown = Node(
         package='gazebo_ros',
         executable='spawn_entity.py',
+        # North of the first search waypoint: the camera picks it up during
+        # the spin there, but no leg of the route drives past it. Its old
+        # spot (3.6, -1.2) sat right in front of the robot spawn — below
+        # the lidar plane, so Nav2 couldn't avoid it and ran it over on the
+        # way out.
         arguments=['-file', os.path.join(pkg_share, 'urdf', 'distractor_brown.sdf'),
                    '-entity', 'distractor_brown',
-                   '-x', '3.6', '-y', '-1.2', '-z', '0.025'],
+                   '-x', '0.7', '-y', '2.7', '-z', '0.025'],
         output='screen',
     )
 
